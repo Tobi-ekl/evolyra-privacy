@@ -1,0 +1,43 @@
+# Publishes the four legal pages as-is.
+#
+# Replaces GitHub's built-in "pages build and deployment" job, which runs
+# Jekyll over the branch. That job kept sitting in Queued and being cancelled
+# at the 15-minute mark without ever starting — nothing to do with these
+# files, which are plain HTML. This runs on an ordinary ubuntu runner and
+# uploads the repository unchanged, so there is no build step to hang.
+name: Deploy pages
+
+on:
+  push:
+    branches: [main]
+  # Lets a stuck run be retried from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push waits rather than racing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The site is the repository root — index.html, terms.html and the
+          # sv/ pair. No generator involved.
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
